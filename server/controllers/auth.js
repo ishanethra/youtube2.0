@@ -65,6 +65,25 @@ export const startLogin = async (req, res) => {
     }
 
     if (deliveryFailed) {
+      // Fail-safe: if email OTP fails but a mobile exists, fallback to mobile OTP flow
+      // so login can still proceed instead of returning a hard 503.
+      if (otpMode === "email" && effectiveMobile) {
+        return res.status(200).json({
+          otpSent: true,
+          otpMode: "mobile",
+          deliveryFailed: false,
+          fallbackUsed: "email_to_mobile",
+          message: "Email OTP unavailable. Switched to mobile OTP verification.",
+          profilePreview: {
+            email: cleanEmail,
+            name,
+            image,
+            state,
+            city,
+            mobile: effectiveMobile,
+          },
+        });
+      }
       return res.status(503).json({
         otpSent: false,
         otpMode,
