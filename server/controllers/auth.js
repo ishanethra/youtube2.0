@@ -1,22 +1,9 @@
 import mongoose from "mongoose";
 import users from "../Modals/Auth.js";
 import otpModel from "../Modals/otp.js";
-import { SOUTH_STATES } from "../utils/plans.js";
 import { sendEmail } from "../utils/notification.js";
 
-const getOtpMode = (email = "", state = "") => {
-  const normalized = state.toLowerCase().trim();
-
-  // South India check (Tamil Nadu, Kerala, Karnataka, Andhra Pradesh, Telangana)
-  const isSouthIndia = SOUTH_STATES.includes(normalized) || 
-                       normalized.includes("tamil") || 
-                       normalized.includes("kerala") ||
-                       normalized.includes("karnataka") ||
-                       normalized.includes("andhra") ||
-                       normalized.includes("telangana");
-                       
-  return isSouthIndia ? "email" : "mobile";
-};
+const getOtpMode = () => "email";
 
 const generateOtp = () => `${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -65,25 +52,6 @@ export const startLogin = async (req, res) => {
     }
 
     if (deliveryFailed) {
-      // Fail-safe: if email OTP fails but a mobile exists, fallback to mobile OTP flow
-      // so login can still proceed instead of returning a hard 503.
-      if (otpMode === "email" && effectiveMobile) {
-        return res.status(200).json({
-          otpSent: true,
-          otpMode: "mobile",
-          deliveryFailed: false,
-          fallbackUsed: "email_to_mobile",
-          message: "Email OTP unavailable. Switched to mobile OTP verification.",
-          profilePreview: {
-            email: cleanEmail,
-            name,
-            image,
-            state,
-            city,
-            mobile: effectiveMobile,
-          },
-        });
-      }
       return res.status(503).json({
         otpSent: false,
         otpMode,
